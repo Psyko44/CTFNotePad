@@ -268,7 +268,10 @@ const saveContent = () => {
 
 const selectZone = (zone) => {
   currentZone.value = zone
-  initializeEditor()
+  if (easyMDE) {
+    easyMDE.value(zone.notes || '') // Réinitialise le contenu avec les notes de la nouvelle zone
+  }
+  initializeEditor() // Réinitialise l'éditeur avec le nouveau contenu
 }
 
 const staticZones = [

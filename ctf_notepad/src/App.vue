@@ -74,6 +74,11 @@
           <v-list-item-title>Générateur de Shells</v-list-item-title>
         </v-list-item>
       </v-list>
+      <v-list-item class="mt-2">
+        <v-btn block color="primary" prepend-icon="mdi-plus" @click="showNewProjectDialog = true">
+          Nouveau Projet
+        </v-btn>
+      </v-list-item>
 
       <v-divider class="my-2"></v-divider>
 
@@ -95,17 +100,18 @@
                   </template>
                   <v-list-item-title class="text-error">Delete</v-list-item-title>
                 </v-list-item>
+                <v-list-item @click="exportProject">
+                  <v-list-item-title>Export</v-list-item-title>
+                </v-list-item>
               </v-list>
             </v-menu>
           </template>
         </v-list-item>
       </v-list>
 
-      <template v-slot:append>
-        <v-divider></v-divider>
-        <div class="pa-2">
-        </div>
-      </template>
+      <!-- Bouton pour créer un nouveau projet -->
+
+
     </v-navigation-drawer>
 
     <!-- Contenu principal -->
@@ -114,10 +120,10 @@
       <router-view></router-view>
     </v-main>
 
-    <!-- Dialog pour nouveau projet -->
-    <v-dialog v-model="showNewProjectDialog" max-width="400px">
+    <!-- Dialog pour créer un nouveau projet -->
+    <v-dialog v-model="showNewProjectDialog" max-width="500px">
       <v-card>
-        <v-card-title class="text-h5 pa-4">
+        <v-card-title>
           Create New Project
         </v-card-title>
         <v-card-text>
