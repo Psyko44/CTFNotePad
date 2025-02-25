@@ -122,19 +122,19 @@
     <v-dialog v-model="showNewProjectDialog" max-width="500px">
       <v-card>
         <v-card-title>
-          Create New Project
+          Nouveau Projet
         </v-card-title>
         <v-card-text>
-          <v-text-field v-model="newProjectName" label="Project Name" variant="outlined" hide-details autofocus
+          <v-text-field v-model="newProjectName" label="Nom du Projet" variant="outlined" hide-details autofocus
             @keyup.enter="createProject"></v-text-field>
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn color="error" variant="text" @click="showNewProjectDialog = false">
-            Cancel
+            Annuler
           </v-btn>
           <v-btn color="primary" @click="createProject" :disabled="!newProjectName.trim()">
-            Create
+            Creer
           </v-btn>
         </v-card-actions>
       </v-card>

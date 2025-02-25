@@ -46,8 +46,8 @@
       <v-card variant="text" class="text-center">
         <v-card-text>
           <v-icon size="64" color="primary" icon="mdi-folder-plus"></v-icon>
-          <div class="text-h5 mt-4">Welcome to CTF NotePad</div>
-          <div class="text-body-1 mt-2">Create or select a project to start taking notes</div>
+          <div class="text-h5 mt-4">Bienvenue dans CTF NotePad</div>
+          <div class="text-body-1 mt-2">Cliquez sur "Nouveau Projet" pour créer votre premier projet</div>
         </v-card-text>
       </v-card>
     </div>
