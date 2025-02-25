@@ -70,9 +70,7 @@
           <v-list-item-title>Privilege Escalation</v-list-item-title>
         </v-list-item>
 
-        <v-list-item to="/shells" :active="route.path === '/shells'">
-          <v-list-item-title>Générateur de Shells</v-list-item-title>
-        </v-list-item>
+
       </v-list>
       <v-list-item class="mt-2">
         <v-btn block color="primary" prepend-icon="mdi-plus" @click="showNewProjectDialog = true">
