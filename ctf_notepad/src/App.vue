@@ -58,23 +58,24 @@
       <v-divider></v-divider>
 
       <v-list density="compact" nav>
-        <v-list-item to="/" :active="route.path === '/'">
-          <v-list-item-title>Accueil</v-list-item-title>
+        <v-list-item to="/" :active="route.path === '/'" prepend-icon="mdi-home">
+          <v-list-item-title v-if="!rail">Accueil</v-list-item-title>
         </v-list-item>
 
-        <v-list-item to="/techniques" :active="route.path === '/techniques'">
-          <v-list-item-title>Techniques</v-list-item-title>
+        <v-list-item to="/techniques" :active="route.path === '/techniques'" prepend-icon="mdi-book">
+          <v-list-item-title v-if="!rail">Techniques</v-list-item-title>
         </v-list-item>
 
-        <v-list-item to="/privesc" :active="route.path === '/privesc'">
-          <v-list-item-title>Privilege Escalation</v-list-item-title>
+        <v-list-item to="/privesc" :active="route.path === '/privesc'" prepend-icon="mdi-lock">
+          <v-list-item-title v-if="!rail">Privilege Escalation</v-list-item-title>
         </v-list-item>
-
-
       </v-list>
+
+
+
       <v-list-item class="mt-2">
         <v-btn block color="primary" prepend-icon="mdi-plus" @click="showNewProjectDialog = true">
-          Nouveau Projet
+          <span v-if="!rail">Nouveau Projet</span>
         </v-btn>
       </v-list-item>
 

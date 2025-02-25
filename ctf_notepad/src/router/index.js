@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import EditorView from '@/views/EditorView.vue'
+import HomeView from '@/views/HomeView.vue'
 import TechniquesView from '../views/TechniquesView.vue'
 import PrivEscView from '../views/PrivEscView.vue'
 
@@ -9,7 +10,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/editor'
+      name: 'home',
+      component: HomeView
     },
     {
       path: '/editor',

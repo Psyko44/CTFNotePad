@@ -22,11 +22,16 @@ export const useProjectStore = defineStore('project', () => {
       id: Date.now().toString(),
       name,
       created_at: new Date().toISOString(),
+      timer: {
+        elapsedTime: 0,  // temps écoulé en secondes
+        isRunning: false,
+        startTime: null
+      },
       zones: {
-        recon: { id: 'recon', name: 'Recon', notes: '', checklist: [] },
-        exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [] },
-        privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [] },
-        flags: { id: 'flags', name: 'Flags', notes: '', checklist: [] }
+        recon: { id: 'recon', name: 'Recon', notes: '', checklist: [], timeSpent: 0 },
+        exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [], timeSpent: 0 },
+        privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [], timeSpent: 0 },
+        flags: { id: 'flags', name: 'Flags', notes: '', checklist: [], timeSpent: 0 }
       }
     }
     projects.value.push(newProject)
@@ -38,10 +43,10 @@ export const useProjectStore = defineStore('project', () => {
   const loadProject = (project) => {
     // S'assurer que le projet a toutes les zones par défaut
     const defaultZones = {
-      recon: { id: 'recon', name: 'Recon', notes: '', checklist: [] },
-      exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [] },
-      privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [] },
-      flags: { id: 'flags', name: 'Flags', notes: '', checklist: [] }
+      recon: { id: 'recon', name: 'Recon', notes: '', checklist: [], timeSpent: 0 },
+      exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [], timeSpent: 0 },
+      privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [], timeSpent: 0 },
+      flags: { id: 'flags', name: 'Flags', notes: '', checklist: [], timeSpent: 0 }
     }
 
     // Fusionner les zones existantes avec les zones par défaut
@@ -85,6 +90,16 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  // Mettre à jour le temps passé dans une zone
+  const updateZoneTimeSpent = (zoneId, timeSpent) => {
+    if (!currentProject.value?.zones) return
+    const zone = currentProject.value.zones[zoneId]
+    if (zone) {
+      zone.timeSpent = timeSpent
+      saveProjects()
+    }
+  }
+
   // Charger les projets
   const loadProjects = () => {
     try {
@@ -96,11 +111,18 @@ export const useProjectStore = defineStore('project', () => {
           if (!project.zones) {
             project.zones = {}
           }
+          if (!project.timer) {
+            project.timer = {
+              elapsedTime: 0,
+              isRunning: false,
+              startTime: null
+            }
+          }
           const defaultZones = {
-            recon: { id: 'recon', name: 'Recon', notes: '', checklist: [] },
-            exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [] },
-            privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [] },
-            flags: { id: 'flags', name: 'Flags', notes: '', checklist: [] }
+            recon: { id: 'recon', name: 'Recon', notes: '', checklist: [], timeSpent: 0 },
+            exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [], timeSpent: 0 },
+            privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [], timeSpent: 0 },
+            flags: { id: 'flags', name: 'Flags', notes: '', checklist: [], timeSpent: 0 }
           }
           project.zones = {
             ...defaultZones,
@@ -124,6 +146,12 @@ export const useProjectStore = defineStore('project', () => {
       }
       saveProjects()
     }
+  }
+
+  const updateProjectTimer = (timerData) => {
+    if (!currentProject.value) return;
+    currentProject.value.timer = timerData;
+    saveProjects();
   }
 
   // Exporter un projet
@@ -175,6 +203,8 @@ export const useProjectStore = defineStore('project', () => {
     updateProjectName,
     updateZoneNotes,
     updateZoneChecklist,
+    updateZoneTimeSpent,
+    updateProjectTimer,
     saveProjects,
     loadProjects,
     deleteProject,

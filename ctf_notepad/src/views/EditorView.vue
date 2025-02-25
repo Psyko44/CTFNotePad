@@ -58,33 +58,53 @@
       <v-toolbar density="compact" flat class="border-b">
         <v-toolbar-title class="font-weight-bold">{{ currentProject.name }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <div class="toolbar">
-          <v-btn prepend-icon="mdi-export" variant="text" @click="exportProject"
-            :disabled="!projectStore.currentProject">
-            Export JSON
-          </v-btn>
-          <v-btn prepend-icon="mdi-file-pdf-box" variant="text" @click="exportToPdf"
-            :disabled="!projectStore.currentProject">
-            Export PDF
-          </v-btn>
-        </div>
+        <v-btn prepend-icon="mdi-export" variant="text" @click="exportProject" :disabled="!projectStore.currentProject">
+          Export MD
+        </v-btn>
+        <v-btn prepend-icon="mdi-file-pdf-box" variant="text" @click="exportToPdf"
+          :disabled="!projectStore.currentProject">
+          Export PDF
+        </v-btn>
+        <v-btn prepend-icon="mdi-timer" variant="text" @click="toggleTimer">
+          {{ isTimerRunningComputed ? 'Arrêter le timer' : 'Démarrer le timer' }}
+        </v-btn>
+        <v-btn prepend-icon="mdi-refresh" variant="text" @click="resetTimer">
+          Réinitialiser le timer
+        </v-btn>
       </v-toolbar>
 
       <!-- Contenu principal: zones (gauche) + éditeur (droite) -->
       <div class="d-flex flex-grow-1">
         <!-- Panneau latéral avec les zones -->
-        <v-navigation-drawer permanent location="left" class="zone-nav">
+        <v-navigation-drawer v-model="drawer" elevation="3" :rail="rail" permanent>
+          <v-btn icon @click="rail = !rail">
+            <v-icon>{{ rail ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
+          </v-btn>
           <v-list>
             <draggable v-model="zonesList" item-key="id" handle=".handle">
               <template #item="{ element: zone }">
-                <v-list-item :title="zone.name" :active="currentZone?.id === zone.id" @click="selectZone(zone)"
+                <v-list-item :active="currentZone?.id === zone.id" @click="selectZone(zone)"
                   class="d-flex align-center">
-                  <template v-slot:prepend>
-                    <v-icon class="handle" icon="mdi-drag" size="small" />
+
+                  <!-- Icône draggable -->
+                  <template v-slot:prepend v-if="!rail">
+                    <v-icon class="handle">mdi-drag</v-icon>
                   </template>
+
+                  <!-- Affichage du nom uniquement si la barre n'est pas réduite -->
+                  <v-list-item-title v-if="!rail">
+                    {{ zone.name }}
+                  </v-list-item-title>
+
+                  <!-- Ajout d'une icône par zone pour une meilleure visibilité en mode réduit -->
+                  <v-icon v-if="rail">
+                    {{ getZoneIcon(zone.name) }}
+                  </v-icon>
+
+                  <!-- Bouton de suppression (seulement pour les zones non statiques) -->
                   <template v-slot:append>
-                    <v-btn v-if="!isStaticZone(zone.id)" icon="mdi-delete" variant="text" size="small" color="error"
-                      @click.stop="deleteZone(zone)" />
+                    <v-btn v-if="!isStaticZone(zone.id) && !rail" icon="mdi-delete" variant="text" size="small"
+                      color="error" @click.stop="deleteZone(zone)" />
                   </template>
                 </v-list-item>
               </template>
@@ -93,8 +113,9 @@
             <v-divider class="my-2" />
 
             <v-list-item>
-              <v-btn block color="primary" prepend-icon="mdi-plus" @click="addNewZone">
-                Ajouter une zone
+              <v-btn block color="primary" @click="addNewZone">
+                <v-icon v-if="rail">mdi-plus</v-icon>
+                <span v-if="!rail">Ajouter une zone</span>
               </v-btn>
             </v-list-item>
           </v-list>
@@ -138,9 +159,14 @@
         </div>
 
         <!-- Zone de prévisualisation -->
-        <div class="preview-zone">
+        <div class="preview-zone preview-wrapper">
           <v-toolbar density="compact" class="border-b mb-4">
             <v-toolbar-title>Prévisualisation</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <div class="timer-container">
+              <v-icon icon="mdi-clock-outline" class="mr-2" />
+              <span class="time-display">{{ formatTime(projectElapsedTime) }}</span>
+            </div>
           </v-toolbar>
           <div class="preview-content" v-html="allZonesContent"></div>
         </div>
@@ -158,6 +184,13 @@ import draggable from 'vuedraggable'
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min'
 import 'easymde/dist/easymde.min.css'
 
+const drawer = ref(true)
+const rail = ref(false)
+const timer = ref(null)
+const isTimerRunning = ref(false)
+const elapsedTime = ref(0)
+const startTime = ref(null)
+
 
 marked.setOptions({
   breaks: true,
@@ -165,7 +198,6 @@ marked.setOptions({
   mangle: false,
   html: true
 })
-
 
 const darkThemeStyles = `
 .v-theme--dark .editor-wrapper .CodeMirror,
@@ -200,16 +232,71 @@ const darkThemeStyles = `
 }
 `
 
-
 const styleSheet = document.createElement('style')
 styleSheet.textContent = darkThemeStyles
 document.head.appendChild(styleSheet)
+
+// Fonction pour formater le temps (convertit les secondes en HH:MM:SS)
+const formatTime = (seconds) => {
+  const hrs = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// Démarrer/Arrêter le timer
+
 
 const projectStore = useProjectStore()
 const currentZone = ref(null)
 let easyMDE = null
 
 const currentProject = computed(() => projectStore.currentProject)
+
+const toggleTimer = () => {
+  if (!projectStore.currentProject) return;
+
+  let timerData = projectStore.currentProject.timer || { elapsedTime: 0, isRunning: false, startTime: null };
+
+  if (!timerData.isRunning) {
+    // Démarrer le timer en tenant compte du temps déjà écoulé
+    timerData.startTime = Date.now() - (timerData.elapsedTime * 1000);
+    timer.value = setInterval(() => {
+      timerData.elapsedTime = Math.floor((Date.now() - timerData.startTime) / 1000);
+      projectStore.updateProjectTimer(timerData);
+    }, 1000);
+    timerData.isRunning = true;
+  } else {
+    // Arrêter le timer
+    clearInterval(timer.value);
+    timerData.isRunning = false;
+    projectStore.updateProjectTimer(timerData);
+  }
+}
+
+// Réinitialiser le timer
+const resetTimer = () => {
+  clearInterval(timer.value);
+  if (!currentProject.value) return;
+  const timerData = { elapsedTime: 0, isRunning: false, startTime: null };
+  projectStore.updateProjectTimer(timerData); // Correction ici
+}
+
+// Nettoyer le timer quand le composant est détruit
+onBeforeUnmount(() => {
+  if (timer.value) {
+    clearInterval(timer.value)
+  }
+})
+
+const projectElapsedTime = computed(() => {
+  return projectStore.currentProject?.timer?.elapsedTime || 0;
+});
+
+
+const isTimerRunningComputed = computed(() => {
+  return projectStore.currentProject?.timer?.isRunning || false;
+});
 
 
 const checklist = computed({
@@ -269,9 +356,9 @@ const saveContent = () => {
 const selectZone = (zone) => {
   currentZone.value = zone
   if (easyMDE) {
-    easyMDE.value(zone.notes || '') // Réinitialise le contenu avec les notes de la nouvelle zone
+    easyMDE.value(zone.notes || '')
   }
-  initializeEditor() // Réinitialise l'éditeur avec le nouveau contenu
+  initializeEditor()
 }
 
 const staticZones = [
@@ -280,7 +367,6 @@ const staticZones = [
   { id: 'privesc', name: 'Privesc' },
   { id: 'flags', name: 'Flags' }
 ]
-
 
 const zonesList = computed({
   get: () => {
@@ -511,51 +597,36 @@ const exportProject = () => {
   }
 
   try {
-
-    const projectData = {
-      ...projectStore.currentProject,
-      zones: Object.values(projectStore.currentProject.zones || {}).map(zone => ({
-        id: zone.id,
-        name: zone.name,
-        notes: zone.notes || '',
-        checklist: zone.checklist || []
-      }))
-    }
+    let markdownContent = `# ${projectStore.currentProject.name}\n\n`
+    markdownContent += `Date: ${new Date().toISOString().split('T')[0]}\n\n`
 
 
-    const projectImages = {}
-    const imageKeys = Object.keys(localStorage).filter(key =>
-      key.startsWith('image_') &&
-      projectData.zones.some(zone =>
-        zone.notes && zone.notes.includes(key.replace('image_', ''))
-      )
-    )
+    Object.values(projectStore.currentProject.zones || {}).forEach(zone => {
+      markdownContent += `## ${zone.name}\n\n`
 
-    imageKeys.forEach(key => {
-      projectImages[key] = localStorage.getItem(key)
+
+      if (zone.notes) {
+        markdownContent += `### Notes\n\n${zone.notes}\n\n`
+      }
+
+
+      if (zone.checklist && zone.checklist.length > 0) {
+        markdownContent += '### Checklist\n\n'
+        zone.checklist.forEach(item => {
+          markdownContent += `- [${item.checked ? 'x' : ' '}] ${item.text}\n`
+        })
+        markdownContent += '\n'
+      }
     })
 
-
-    const exportData = {
-      project: projectData,
-      images: projectImages,
-      version: '1.0'
-    }
-
-
-    const jsonString = JSON.stringify(exportData, null, 2)
-    const blob = new Blob([jsonString], { type: 'application/json' })
-
-
+    const blob = new Blob([markdownContent], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${projectData.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`
-
+    link.download = `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.md`
 
     document.body.appendChild(link)
     link.click()
-
 
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
@@ -565,167 +636,198 @@ const exportProject = () => {
 }
 
 const exportToPdf = async () => {
-  if (!projectStore.currentProject) return
+  if (!projectStore.currentProject) return;
 
   try {
+    // Conteneur principal
+    const wrapper = document.createElement("div");
+    wrapper.style.backgroundColor = "#FFFFFF";
+    wrapper.style.padding = "0";
+    wrapper.style.margin = "0";
+    wrapper.style.position = "relative";
+    wrapper.style.width = "100%";
 
-    const wrapper = document.createElement('div')
-    wrapper.style.backgroundColor = '#1a1f2c'
-    wrapper.style.padding = '20px'
-    wrapper.style.margin = '0'
-    wrapper.style.position = 'relative'
+    wrapper.style.minHeight = "calc(297mm - 10px)";
+
+    // Contenu principal du PDF
+    const content = document.createElement("div");
+    content.className = "pdf-content";
+    content.style.color = "#ffffff"; // texte en noir
+    content.style.backgroundColor = "#FFFFFF";
+    content.style.margin = "0";
+    content.style.width = "100%";
+    content.style.display = "flex";
+    content.style.flexDirection = "column";
+    content.style.alignItems = "center";
+    content.style.minHeight = "calc(297mm - 10px)";
+
+    // Titre principal
+    const title = document.createElement("h1");
+    title.textContent = projectStore.currentProject.name;
+    title.style.textAlign = "center";
+    title.style.color = "#ff222f";
+    title.style.marginBottom = "30px";
+    content.appendChild(title);
+
+    // Parcours des zones
+    const zonesArray = Object.values(projectStore.currentProject.zones);
+    zonesArray.forEach((zone, index) => {
+      // Conteneur de la zone
+      const zoneWrapper = document.createElement("div");
+      zoneWrapper.className = "zone-wrapper";
+      zoneWrapper.style.width = "95%";
+      zoneWrapper.style.backgroundColor = "#091b32";
+      zoneWrapper.style.color = "#ffffff";
+      zoneWrapper.style.padding = "20px";
+      zoneWrapper.style.display = "flex";
+      zoneWrapper.style.flexDirection = "column";
+      zoneWrapper.style.justifyContent = "flex-start";
 
 
-    const content = document.createElement('div')
-    content.className = 'pdf-content'
-    content.style.color = '#FFFFFF'
-    content.style.backgroundColor = '#1a1f2c'
+      if (index < zonesArray.length - 1) {
+        zoneWrapper.style.marginBottom = "20px";
+      }
 
+      // Titre de la zone
+      const zoneTitle = document.createElement("h2");
+      zoneTitle.textContent = zone.name;
+      zoneTitle.style.fontSize = "24px";
+      zoneTitle.style.color = "#ff222f";
+      zoneTitle.style.backgroundColor = "#091b32";
+      zoneTitle.style.padding = "10px";
+      zoneTitle.style.border = "2px solid #091b32";
+      zoneTitle.style.borderRadius = "4px";
+      zoneWrapper.appendChild(zoneTitle);
 
-    const title = document.createElement('h1')
-    title.textContent = projectStore.currentProject.name
-    title.style.fontSize = '28px'
-    title.style.marginBottom = '30px'
-    title.style.textAlign = 'center'
-    title.style.color = '#ff3333'
-    title.style.pageBreakAfter = 'avoid'
-    title.style.textTransform = 'uppercase'
-    title.style.letterSpacing = '2px'
-    content.appendChild(title)
-
-
-    for (const zone of Object.values(projectStore.currentProject.zones)) {
-
-      const zoneTitle = document.createElement('h2')
-      zoneTitle.textContent = zone.name
-      zoneTitle.style.fontSize = '24px'
-      zoneTitle.style.marginTop = '30px'
-      zoneTitle.style.marginBottom = '20px'
-      zoneTitle.style.color = '#FFFFFF'
-      zoneTitle.style.padding = '10px'
-      zoneTitle.style.border = '2px solid #FFFFFF'
-      zoneTitle.style.borderRadius = '4px'
-      zoneTitle.style.pageBreakAfter = 'avoid'
-      content.appendChild(zoneTitle)
-
-
+      // Notes
       if (zone.notes) {
-        const notesDiv = document.createElement('div')
-        notesDiv.style.color = '#FFFFFF'
-        notesDiv.style.marginBottom = '20px'
+        const notesDiv = document.createElement("div");
+        notesDiv.style.color = "#ffffff";
 
+        const notesWithImages = replaceStoredImages(zone.notes);
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = marked(notesWithImages);
 
-        const notesWithImages = replaceStoredImages(zone.notes)
-
-
-        const tempDiv = document.createElement('div')
-        tempDiv.innerHTML = marked(notesWithImages)
-
-
-        const allElements = tempDiv.getElementsByTagName('*')
+        // Appliquer les styles internes
+        const allElements = tempDiv.getElementsByTagName("*");
         for (let i = 0; i < allElements.length; i++) {
-          const el = allElements[i]
-          el.style.color = '#FFFFFF'
+          const el = allElements[i];
+          el.style.color = "#ffffff";
 
-          if (el.tagName === 'IMG') {
-            el.style.maxWidth = '100%'
-            el.style.height = 'auto'
-            el.style.display = 'block'
-            el.style.margin = '10px auto'
-            el.style.pageBreakInside = 'avoid'
-            el.style.maxHeight = '500px'
-            el.style.objectFit = 'contain'
+          if (el.tagName === "IMG") {
+            el.style.maxWidth = "100%";
+            el.style.height = "auto";
+            el.style.display = "block";
+            el.style.margin = "10px auto";
+            el.style.pageBreakInside = "avoid";
+            el.style.maxHeight = "400px";
+            el.style.objectFit = "contain";
           }
 
-          if (el.tagName === 'CODE' || el.tagName === 'PRE') {
-            el.style.backgroundColor = '#2e3440'
-            el.style.padding = '8px'
-            el.style.borderRadius = '4px'
-            el.style.fontFamily = 'Courier New, monospace'
-            el.style.pageBreakInside = 'avoid'
+          if (el.tagName === "CODE" || el.tagName === "PRE") {
+            el.style.backgroundColor = "#f0f0f0";
+            el.style.padding = "8px";
+            el.style.borderRadius = "4px";
+            el.style.fontFamily = "Courier New, monospace";
+            el.style.pageBreakInside = "avoid";
           }
         }
 
-        notesDiv.innerHTML = tempDiv.innerHTML
-        content.appendChild(notesDiv)
+        notesDiv.innerHTML = tempDiv.innerHTML;
+        zoneWrapper.appendChild(notesDiv);
       }
 
-
+      // Checklist
       if (zone.checklist?.length) {
-        const checklistTitle = document.createElement('h3')
-        checklistTitle.textContent = 'Checklist'
-        checklistTitle.style.fontSize = '20px'
-        checklistTitle.style.marginTop = '20px'
-        checklistTitle.style.marginBottom = '15px'
-        checklistTitle.style.color = '#FFFFFF'
-        checklistTitle.style.pageBreakAfter = 'avoid'
-        content.appendChild(checklistTitle)
+        const checklistTitle = document.createElement("h3");
+        checklistTitle.textContent = "Checklist";
+        checklistTitle.style.fontSize = "20px";
+        checklistTitle.style.marginTop = "20px";
+        checklistTitle.style.marginBottom = "15px";
+        checklistTitle.style.color = "#333333";
+        zoneWrapper.appendChild(checklistTitle);
 
-        const list = document.createElement('ul')
-        list.style.listStyleType = 'none'
-        list.style.padding = '0'
-        list.style.margin = '15px 0 25px'
-        list.style.color = '#FFFFFF'
+        const list = document.createElement("ul");
+        list.style.listStyleType = "none";
+        list.style.padding = "0";
+        list.style.margin = "15px 0 25px";
+        list.style.color = "#000000";
 
-        zone.checklist.forEach(item => {
-          const li = document.createElement('li')
-          li.style.color = '#FFFFFF'
-          li.style.marginBottom = '8px'
-          li.style.display = 'flex'
-          li.style.alignItems = 'center'
+        zone.checklist.forEach((item) => {
+          const li = document.createElement("li");
+          li.style.color = "#000000";
+          li.style.marginBottom = "8px";
+          li.style.display = "flex";
+          li.style.alignItems = "center";
           li.innerHTML = `
             <span style="margin-right: 10px; font-size: 1.2em;">
-              ${item.checked ? '✓' : '☐'}
+              ${item.checked ? "✓" : "☐"}
             </span>
             <span style="flex: 1;">${item.text}</span>
-          `
-          list.appendChild(li)
-        })
+          `;
+          list.appendChild(li);
+        });
 
-        content.appendChild(list)
+        zoneWrapper.appendChild(list);
       }
 
+      content.appendChild(zoneWrapper);
+    });
 
-      if (zone !== Object.values(projectStore.currentProject.zones).slice(-1)[0]) {
-        const separator = document.createElement('hr')
-        separator.style.border = 'none'
-        separator.style.margin = '30px 0'
-        content.appendChild(separator)
+    wrapper.appendChild(content);
+
+    // Styles CSS pour le PDF
+    const styles = `
+      @page {
+        size: A4;
+        margin: 0;
       }
-    }
+      html, body {
+        height: 100%;
+        background-color: #FFFFFF !important;
+        margin: 0;
+        padding: 0;
+      }
+      .pdf-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        min-height: calc(297mm - 10px);
+        background-color: #FFFFFF;
+      }
+      .zone-wrapper {
+        background-color: #FFFFFF;
+      }
+    `;
+    const styleSheet = document.createElement("style");
+    styleSheet.innerHTML = styles;
+    document.head.appendChild(styleSheet);
 
-    wrapper.appendChild(content)
-
-
+    // Génération du PDF
     const opt = {
       margin: 0,
-      filename: `${projectStore.currentProject.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: {
-        type: 'jpeg',
-        quality: 0.98
-      },
+      filename: `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`,
+      image: { type: "jpeg", quality: 1 },
       html2canvas: {
         scale: 2,
         useCORS: true,
-        logging: true,
-        backgroundColor: '#0b1b23'
+        backgroundColor: "#FFFFFF",
+        logging: false,
       },
       jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-        compress: true
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+        compress: true,
       },
-      pagebreak: { mode: 'avoid-all' }
-    }
+    };
 
-
-    await html2pdf().set(opt).from(wrapper).save()
-
+    html2pdf().set(opt).from(wrapper).save();
   } catch (error) {
-    console.error('Error exporting to PDF:', error)
+    console.error("Error exporting to PDF:", error);
   }
-}
+};
 
 const insertImage = async (file) => {
   if (easyMDE && file) {
@@ -740,11 +842,9 @@ const insertImage = async (file) => {
   }
 }
 
-
 onBeforeUnmount(() => {
   cleanupEditor()
 })
-
 
 onMounted(() => {
   if (projectStore.currentProject) {
@@ -882,71 +982,6 @@ onMounted(() => {
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-/* Styles pour le PDF */
-.pdf-content {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  color: #FFFFFF;
-  max-width: 210mm;
-  /* Largeur A4 */
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #1a1f2c;
-}
-
-.pdf-content h1 {
-  font-size: 28px;
-  margin-bottom: 30px;
-  text-align: center;
-  color: #ff3333;
-  page-break-after: avoid;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.pdf-content h2 {
-  font-size: 24px;
-  margin-top: 30px;
-  margin-bottom: 20px;
-  color: #FFFFFF;
-  padding: 10px;
-  border: 2px solid #FFFFFF;
-  border-radius: 4px;
-  page-break-after: avoid;
-}
-
-.pdf-content h3 {
-  font-size: 20px;
-  margin-top: 20px;
-  margin-bottom: 15px;
-  color: #FFFFFF;
-  page-break-after: avoid;
-}
-
-.pdf-content .zone-content {
-  margin-bottom: 20px;
-  color: #FFFFFF;
-}
-
-.pdf-content pre {
-  background-color: #2a2f3c;
-  padding: 10px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 10px 0;
-  page-break-inside: avoid;
-  white-space: pre-wrap;
-  color: #FFFFFF;
-}
-
-.pdf-content code {
-  font-family: 'Courier New', monospace;
-  background-color: #2a2f3c;
-  padding: 2px 4px;
-  border-radius: 2px;
-  color: #FFFFFF;
-}
-
 .checklist {
   list-style-type: none;
   padding-left: 20px;
@@ -1073,6 +1108,7 @@ onMounted(() => {
   padding: 1rem;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 4px;
+
 }
 
 .zone-title {
@@ -1081,9 +1117,27 @@ onMounted(() => {
   border-bottom: 2px solid rgba(var(--v-border-color), var(--v-border-opacity));
   font-size: 1.5rem;
   font-weight: bold;
+  color: #fa0202;
 }
 
 .zone-content {
   min-height: 50px;
+}
+
+.timer-container {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.time-display {
+  font-family: monospace;
+  font-size: 1.1em;
+  min-width: 80px;
+  text-align: center;
+}
+
+.preview-wrapper {
+  position: relative;
 }
 </style>

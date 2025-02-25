@@ -115,7 +115,7 @@ const copyToClipboard = async (text) => {
 
 .code-explanation {
   font-size: 0.9em;
-  color: #888;
+  color: #f70101;
   margin-bottom: 8px;
   font-style: italic;
 }
@@ -158,7 +158,7 @@ const copyToClipboard = async (text) => {
 }
 
 .python {
-  color: #4B8BBE;
+  color: yellow;
 }
 
 .php {
@@ -166,7 +166,7 @@ const copyToClipboard = async (text) => {
 }
 
 .powershell {
-  color: #012456;
+  color: rgb(59, 239, 245);
 }
 
 .jsp {
