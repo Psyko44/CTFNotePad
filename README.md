@@ -16,7 +16,7 @@ CTF NotePad est un outil de prise de notes avancé conçu pour les compétitions
 
 ### Cloner le projet
 ```sh
-git clone https://github.com/yourusername/CTFNotePad.git
+git clone https://github.com/Psyko44/CTFNotePad.git
 cd CTFNotePad
 ```
 
