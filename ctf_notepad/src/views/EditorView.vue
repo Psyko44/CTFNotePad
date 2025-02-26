@@ -776,6 +776,8 @@ const exportToPdf = async () => {
 
     wrapper.appendChild(content);
 
+
+
     // Styles CSS pour le PDF
     const styles = `
       @page {
@@ -784,7 +786,6 @@ const exportToPdf = async () => {
       }
       html, body {
         height: 100%;
-        background-color: #FFFFFF !important;
         margin: 0;
         padding: 0;
       }
@@ -794,11 +795,10 @@ const exportToPdf = async () => {
         align-items: center;
         width: 100%;
         min-height: calc(297mm - 10px);
-        background-color: #FFFFFF;
+
       }
-      .zone-wrapper {
-        background-color: #FFFFFF;
-      }
+
+
     `;
     const styleSheet = document.createElement("style");
     styleSheet.innerHTML = styles;
@@ -814,6 +814,7 @@ const exportToPdf = async () => {
         useCORS: true,
         backgroundColor: "#FFFFFF",
         logging: false,
+
       },
       jsPDF: {
         unit: "mm",
