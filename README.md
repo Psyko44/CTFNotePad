@@ -2,6 +2,11 @@
 
 CTF NotePad est un outil de prise de notes avancé conçu pour les compétitions Capture The Flag (CTF). Il permet aux participants de documenter, organiser et gérer leurs découvertes, techniques et exploits en toute simplicité.
 
+| Aperçu 1  | Aperçu 2  | Aperçu 3  |
+|-----------|-----------|-----------|
+| ![Img1](notepad1.png) | ![Img2](notepad2.png) | ![Img3](notepad3.png) |
+
+
 ## Fonctionnalités
 
 - **Éditeur Markdown Intégré** : Rédigez vos notes avec EasyMDE et prévisualisation en direct
