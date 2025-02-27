@@ -11,9 +11,8 @@ CTF NotePad est un outil de prise de notes avancé conçu pour les compétitions
 - **Export MD & PDF** : Sauvegardez vos projets avec notes, checklist et scripts pour les partager ou les analyser plus tard
 
 ## Lien direct
-```
-https://psyko44.github.io/CTFNotePad/
-```
+
+### [CTFNotePad](https://psyko44.github.io/CTFNotePad/)
 
 ## Installation
 
