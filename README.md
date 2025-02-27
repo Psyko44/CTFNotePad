@@ -6,11 +6,14 @@ CTF NotePad est un outil de prise de notes avancé conçu pour les compétitions
 
 - **Éditeur Markdown Intégré** : Rédigez vos notes avec EasyMDE et prévisualisation en direct
 - **Organisation par Projets et Zones** : Gérez plusieurs challenges CTF simultanément avec des espaces dédiés
+- **Checklists Préconfigurées : Accédez à des listes de vérification adaptées à chaque type de scénario pour ne rien oublier
 - **Base de Données des Techniques** : Stockez et classez vos méthodes d'exploitation pour les retrouver rapidement
-- **Générateur de Shells** : Accédez à une collection de reverse shells, bind shells et web shells prêts à l'emploi
-- **Thème Clair/Sombre** : Personnalisation complète de l'interface pour un meilleur confort visuel
-- **Export JSON & PDF** : Sauvegardez vos projets avec notes, checklist et scripts pour les partager ou les analyser plus tard
-- **Prise en Charge des CTFs Réels** : Adapté aux besoins des pentesters et compétiteurs de CTF
+- **Export MD & PDF** : Sauvegardez vos projets avec notes, checklist et scripts pour les partager ou les analyser plus tard
+
+## Lien direct
+```
+https://psyko44.github.io/CTFNotePad/
+```
 
 ## Installation
 
@@ -81,7 +84,7 @@ Vous pouvez modifier la configuration selon vos besoins en consultant la documen
 
 ### Besoin d'aide ?
 - Ouvrez une issue sur GitHub
-- Contactez-moi sur Twitter ou via LinkedIn
+- Contactez-moi via [![LinkedIn](https://cdn-icons-png.flaticon.com/32/174/174857.png)](https://www.linkedin.com/in/danny-thomas-53b743130/)
 
 ---
 
