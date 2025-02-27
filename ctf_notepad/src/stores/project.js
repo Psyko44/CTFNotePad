@@ -191,6 +191,16 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  const addChecklistItem = (item, zoneId) => {
+    if (!currentProject.value) return
+    const zone = currentProject.value.zones[zoneId]
+    if (zone) {
+      if (!zone.checklist) zone.checklist = []
+      zone.checklist.push(item)
+      saveProjects()
+    }
+  }
+
   // Charger les projets au démarrage
   loadProjects()
 
@@ -209,6 +219,7 @@ export const useProjectStore = defineStore('project', () => {
     loadProjects,
     deleteProject,
     exportProject,
-    importProject
+    importProject,
+    addChecklistItem
   }
 })

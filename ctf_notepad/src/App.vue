@@ -37,13 +37,9 @@
 
 <template>
   <v-app>
-    <v-app-bar>
-      <v-container class="d-flex align-center">
-        <v-spacer></v-spacer>
-        <v-btn block icon @click="toggleTheme">
-          <v-icon>{{ theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
-        </v-btn>
-      </v-container>
+    <v-app-bar density="compact">
+      <v-app-bar-title>CTF NotePad</v-app-bar-title>
+      <v-spacer></v-spacer>
     </v-app-bar>
 
     <!-- Navigation drawer avec les projets -->
@@ -82,15 +78,19 @@
       <v-divider class="my-2"></v-divider>
 
       <v-list v-if="projects.length > 0" density="compact" nav>
-        <v-list-item v-for="project in projects" :key="project.id" :value="project" :title="project.name"
-          :active="currentProject?.id === project.id" @click="selectProject(project)">
+        <v-list-item v-for="project in projects" :key="project.id" :value="project"
+          :active="currentProject?.id === project.id" @click="selectProject(project)"
+          :active-color="'#FF5252'" style="color: #ffffff">
+          <template v-slot:title>
+            <span style="color: #ffffff">{{ project.name }}</span>
+          </template>
           <template v-slot:prepend>
-            <v-icon :icon="currentProject?.id === project.id ? 'mdi-folder-open' : 'mdi-folder'"></v-icon>
+            <v-icon style="color: #ffffff" :icon="currentProject?.id === project.id ? 'mdi-folder-open' : 'mdi-folder'"></v-icon>
           </template>
           <template v-slot:append>
             <v-menu>
               <template v-slot:activator="{ props }">
-                <v-btn icon="mdi-dots-vertical" variant="text" density="compact" v-bind="props" @click.stop></v-btn>
+                <v-btn icon="mdi-dots-vertical" variant="text" style="color: #ffffff" density="compact" v-bind="props" @click.stop></v-btn>
               </template>
               <v-list>
                 <v-list-item @click="deleteProject(project.id)">
@@ -144,15 +144,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
-import { useProjectStore } from '@/stores/project'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useProjectStore } from '@/stores/project'
 
-const theme = useTheme()
-const projectStore = useProjectStore()
 const router = useRouter()
 const route = useRoute()
+const projectStore = useProjectStore()
 const drawer = ref(true)
 const rail = ref(false)
 const showNewProjectDialog = ref(false)
@@ -160,10 +158,6 @@ const newProjectName = ref('')
 
 const currentProject = computed(() => projectStore.currentProject)
 const projects = computed(() => projectStore.projects)
-
-function toggleTheme() {
-  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
-}
 
 const createProject = () => {
   if (newProjectName.value.trim()) {
@@ -182,6 +176,9 @@ const selectProject = (project) => {
 function deleteProject(id) {
   projectStore.deleteProject(id)
 }
+
+
+
 
 const exportProject = () => {
   if (!projectStore.currentProject) {
@@ -239,7 +236,11 @@ const exportProject = () => {
   } catch (error) {
     console.error('Error exporting project:', error)
   }
+
 }
+
+
+
 </script>
 
 <style scoped>
@@ -248,6 +249,7 @@ const exportProject = () => {
   min-height: 0;
   width: 100%;
 }
+
 
 .v-navigation-drawer :deep(.v-navigation-drawer__content) {
   display: flex;
@@ -265,5 +267,22 @@ const exportProject = () => {
 
 .v-navigation-drawer :deep(.v-list) {
   flex-grow: 1;
+}
+
+.v-list-item--active {
+  background-color: rgba(247, 8, 8, 0.253) !important;
+
+}
+
+.v-list-item--active .v-list-item-title {
+  color: #FFFFFF !important;
+}
+
+.v-list-item {
+  color: #FFFFFF !important;
+}
+
+.v-list-item:hover {
+  background-color: rgba(255, 82, 82, 0.7) !important;
 }
 </style>

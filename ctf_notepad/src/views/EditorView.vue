@@ -58,6 +58,13 @@
       <v-toolbar density="compact" flat class="border-b">
         <v-toolbar-title class="font-weight-bold">{{ currentProject.name }}</v-toolbar-title>
         <v-spacer></v-spacer>
+        <v-btn prepend-icon="mdi-format-list-checks" variant="text" :to="{ name: 'checklists' }">
+          Checklists
+        </v-btn>
+        <v-btn prepend-icon="mdi-image" variant="text" @click="triggerFileUpload">
+          Ajouter une image
+        </v-btn>
+        <input type="file" ref="imageUpload" accept="image/*" @change="handleImageUpload" style="display: none;">
         <v-btn prepend-icon="mdi-export" variant="text" @click="exportProject" :disabled="!projectStore.currentProject">
           Export MD
         </v-btn>
@@ -114,8 +121,10 @@
 
             <v-list-item>
               <v-btn block color="primary" @click="addNewZone">
-                <v-icon v-if="rail">mdi-plus</v-icon>
-                <span v-if="!rail">Ajouter une zone</span>
+                <v-btn prepend-icon="mdi-plus" variant="text" @click="addNewZone">
+                  <v-icon v-if="rail">mdi-plus</v-icon>
+                  <span v-if="!rail">Ajouter une zone</span>
+                </v-btn>
               </v-btn>
             </v-list-item>
           </v-list>
@@ -191,61 +200,18 @@ const isTimerRunning = ref(false)
 const elapsedTime = ref(0)
 const startTime = ref(null)
 
-
 marked.setOptions({
+  gfm: true,
   breaks: true,
-  headerIds: false,
-  mangle: false,
   html: true
 })
 
-const darkThemeStyles = `
-.v-theme--dark .editor-wrapper .CodeMirror,
-.v-theme--dark .editor-wrapper .CodeMirror-scroll,
-.v-theme--dark .editor-wrapper .CodeMirror-sizer,
-.v-theme--dark .editor-wrapper .CodeMirror-gutter,
-.v-theme--dark .editor-wrapper .CodeMirror-gutters,
-.v-theme--dark .editor-wrapper .CodeMirror-linenumber,
-.v-theme--dark .editor-wrapper .CodeMirror-lines,
-.v-theme--dark .editor-wrapper .CodeMirror-line,
-.v-theme--dark .editor-wrapper .CodeMirror textarea {
-  background-color: var(--v-theme-surface) !important;
-  color: var(--v-theme-on-surface) !important;
-  caret-color: var(--v-theme-on-surface) !important;
-}
-
-.v-theme--dark .editor-wrapper .CodeMirror-cursor {
-  border-color: var(--v-theme-on-surface) !important;
-}
-
-.v-theme--dark .editor-wrapper .CodeMirror-selected {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.v-theme--dark .editor-wrapper .editor-preview {
-  background-color: var(--v-theme-surface) !important;
-  color: var(--v-theme-on-surface) !important;
-}
-
-.v-theme--dark .editor-wrapper .CodeMirror-focused .CodeMirror-selected {
-  background: rgba(255, 255, 255, 0.2) !important;
-}
-`
-
-const styleSheet = document.createElement('style')
-styleSheet.textContent = darkThemeStyles
-document.head.appendChild(styleSheet)
-
-// Fonction pour formater le temps (convertit les secondes en HH:MM:SS)
 const formatTime = (seconds) => {
   const hrs = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
   return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
-
-// Démarrer/Arrêter le timer
-
 
 const projectStore = useProjectStore()
 const currentZone = ref(null)
@@ -293,11 +259,9 @@ const projectElapsedTime = computed(() => {
   return projectStore.currentProject?.timer?.elapsedTime || 0;
 });
 
-
 const isTimerRunningComputed = computed(() => {
   return projectStore.currentProject?.timer?.isRunning || false;
 });
-
 
 const checklist = computed({
   get: () => currentZone.value?.checklist || [],
@@ -308,7 +272,6 @@ const checklist = computed({
     }
   }
 })
-
 
 const allZonesContent = computed(() => {
   if (!projectStore.currentProject?.zones) return ''
@@ -328,9 +291,10 @@ const allZonesContent = computed(() => {
             </ul>
           </div>`
         : ''
+      const zoneColor = getZoneColor(zone.name)
       return `<div class="zone-section">
-        <h2 class="zone-title">${zone.name}</h2>
-        <div class="zone-content">
+        <h2 class="zone-title" style="color: ${zoneColor}; border: 2px solid ${zoneColor}; padding: 10px; margin-bottom: 20px; border-radius: 4px;">${zone.name}</h2>
+        <div class="zone-content" style="margin-bottom: 20px; margin-left: 20px;">
           ${content}
           ${checklistHtml}
         </div>
@@ -429,14 +393,12 @@ const deleteZone = (zone) => {
 
 const isStaticZone = (zoneId) => staticZones.some(sz => sz.id === zoneId)
 
-
 const cleanupEditor = () => {
   if (easyMDE) {
     easyMDE.toTextArea()
     easyMDE = null
   }
 }
-
 
 const storeImage = async (file) => {
   try {
@@ -465,25 +427,15 @@ const replaceStoredImages = (content) => {
   })
 }
 
-const handleImagePaste = async (e) => {
-  const items = (e.clipboardData || e.originalEvent.clipboardData).items
-  for (const item of items) {
-    if (item.type.indexOf('image') === 0) {
-      e.preventDefault()
-      const file = item.getAsFile()
-      try {
-        const imageName = await storeImage(file)
-        const imageMarkdown = `![${file.name || 'Pasted image'}](stored:${imageName})`
-        easyMDE.codemirror.replaceSelection(imageMarkdown)
-        saveContent()
-      } catch (error) {
-        console.error('Error handling pasted image:', error)
-      }
-      break
-    }
+const getZoneColor = (zoneName) => {
+  switch (zoneName.toLowerCase()) {
+    case 'recon': return '#4CAF50' // Vert
+    case 'exploit': return '#FF5252' // Rouge
+    case 'privesc': return '#FFC107' // Jaune
+    case 'flags': return '#2196F3' // Bleu
+    default: return '#9C27B0' // Violet pour les zones personnalisées
   }
 }
-
 
 const initializeEditor = () => {
   cleanupEditor()
@@ -491,13 +443,12 @@ const initializeEditor = () => {
   const editorElement = document.getElementById('editor')
   if (!editorElement) return
 
-  const isDarkTheme = document.body.classList.contains('v-theme--dark')
-
   easyMDE = new EasyMDE({
     element: editorElement,
     autofocus: true,
     spellChecker: false,
     status: false,
+    theme: 'monokai',
     toolbar: [
       'bold', 'italic', 'heading',
       '|', 'quote', 'unordered-list', 'ordered-list',
@@ -511,32 +462,46 @@ const initializeEditor = () => {
     }
   })
 
+  // Forcer le thème sombre
+  const cm = easyMDE.codemirror
+  cm.setOption('theme', 'monokai')
+  cm.setOption('cursorColor', '#FFFFFF')
+  cm.setOption('cursorStyle', 'line')
+  cm.setOption('cursorBlinkRate', 530)
 
-  if (isDarkTheme) {
-    easyMDE.codemirror.setOption('theme', 'monokai')
+  // Forcer les styles directement sur l'élément
+  const wrapper = cm.getWrapperElement()
+  wrapper.style.backgroundColor = '#1E1E1E'
+  wrapper.style.color = '#FFFFFF'
 
+  const scrollElement = wrapper.querySelector('.CodeMirror-scroll')
+  if (scrollElement) {
+    scrollElement.style.backgroundColor = '#1E1E1E'
+  }
 
-    const cm = easyMDE.codemirror
-    cm.getWrapperElement().style.setProperty('background-color', 'var(--v-theme-surface)', 'important')
+  const cursor = wrapper.querySelector('.CodeMirror-cursor')
+  if (cursor) {
+    cursor.style.borderLeftColor = '#FFFFFF'
+    cursor.style.borderLeftWidth = '2px'
+  }
 
-
-    cm.setOption('styles', {
-      '.CodeMirror': {
-        'background-color': 'var(--v-theme-surface) !important',
-        'color': '#FFFFFF !important'
-      },
-      '.CodeMirror-scroll': {
-        'background-color': 'var(--v-theme-surface) !important'
-      },
-      '.CodeMirror pre': {
-        'color': '#FFFFFF !important'
-      },
-      '.CodeMirror textarea': {
-        'background-color': 'var(--v-theme-surface) !important',
-        'color': '#FFFFFF !important'
+  // Observer pour les nouvelles lignes ajoutées
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.addedNodes) {
+        mutation.addedNodes.forEach((node) => {
+          if (node.classList && node.classList.contains('CodeMirror-line')) {
+            node.style.color = '#FFFFFF'
+          }
+        })
       }
     })
-  }
+  })
+
+  observer.observe(wrapper, {
+    childList: true,
+    subtree: true
+  })
 
   if (currentZone.value?.notes) {
     easyMDE.value(currentZone.value.notes)
@@ -600,15 +565,12 @@ const exportProject = () => {
     let markdownContent = `# ${projectStore.currentProject.name}\n\n`
     markdownContent += `Date: ${new Date().toISOString().split('T')[0]}\n\n`
 
-
     Object.values(projectStore.currentProject.zones || {}).forEach(zone => {
       markdownContent += `## ${zone.name}\n\n`
-
 
       if (zone.notes) {
         markdownContent += `### Notes\n\n${zone.notes}\n\n`
       }
-
 
       if (zone.checklist && zone.checklist.length > 0) {
         markdownContent += '### Checklist\n\n'
@@ -623,7 +585,9 @@ const exportProject = () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.md`
+    link.download = `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date()
+      .toISOString()
+      .split("T")[0]}.md`
 
     document.body.appendChild(link)
     link.click()
@@ -639,33 +603,45 @@ const exportToPdf = async () => {
   if (!projectStore.currentProject) return;
 
   try {
-    // Conteneur principal
+    // Créer un conteneur temporaire visible (mais masqué via l'opacité)
+    const pdfContainer = document.createElement("div");
+    pdfContainer.id = "pdf-export-container";
+    pdfContainer.style.position = "fixed";
+    pdfContainer.style.top = "0";
+    pdfContainer.style.left = "0";
+    pdfContainer.style.opacity = "0"; // Masqué visuellement mais toujours rendu
+    pdfContainer.style.pointerEvents = "none";
+    document.body.appendChild(pdfContainer);
+
+    // Conteneur principal du PDF
     const wrapper = document.createElement("div");
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.padding = "0";
     wrapper.style.margin = "0";
     wrapper.style.position = "relative";
     wrapper.style.width = "100%";
+    // Utilisation d'une hauteur fixe pour assurer la bonne taille (A4 ~297mm)
+    wrapper.style.minHeight = "297mm";
+    pdfContainer.appendChild(wrapper);
 
-    wrapper.style.minHeight = "calc(297mm - 10px)";
-
-    // Contenu principal du PDF
+    // Contenu principal
     const content = document.createElement("div");
     content.className = "pdf-content";
-    content.style.color = "#ffffff"; // texte en noir
+    content.style.color = "#ffffff";
     content.style.backgroundColor = "#FFFFFF";
     content.style.margin = "0";
     content.style.width = "100%";
     content.style.display = "flex";
     content.style.flexDirection = "column";
     content.style.alignItems = "center";
-    content.style.minHeight = "calc(297mm - 10px)";
+    content.style.minHeight = "297mm";
+    wrapper.appendChild(content);
 
     // Titre principal
     const title = document.createElement("h1");
     title.textContent = projectStore.currentProject.name;
     title.style.textAlign = "center";
-    title.style.color = "#ff222f";
+    title.style.color = "#fa0202";
     title.style.marginBottom = "30px";
     content.appendChild(title);
 
@@ -681,9 +657,6 @@ const exportToPdf = async () => {
       zoneWrapper.style.padding = "20px";
       zoneWrapper.style.display = "flex";
       zoneWrapper.style.flexDirection = "column";
-      zoneWrapper.style.justifyContent = "flex-start";
-
-
       if (index < zonesArray.length - 1) {
         zoneWrapper.style.marginBottom = "20px";
       }
@@ -708,12 +681,11 @@ const exportToPdf = async () => {
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = marked(notesWithImages);
 
-        // Appliquer les styles internes
+        // Appliquer les styles aux éléments générés
         const allElements = tempDiv.getElementsByTagName("*");
         for (let i = 0; i < allElements.length; i++) {
           const el = allElements[i];
           el.style.color = "#ffffff";
-
           if (el.tagName === "IMG") {
             el.style.maxWidth = "100%";
             el.style.height = "auto";
@@ -723,16 +695,15 @@ const exportToPdf = async () => {
             el.style.maxHeight = "400px";
             el.style.objectFit = "contain";
           }
-
           if (el.tagName === "CODE" || el.tagName === "PRE") {
             el.style.backgroundColor = "#f0f0f0";
-            el.style.padding = "8px";
+            el.style.color = "#000000";
+            el.style.padding = "3px";
             el.style.borderRadius = "4px";
             el.style.fontFamily = "Courier New, monospace";
             el.style.pageBreakInside = "avoid";
           }
         }
-
         notesDiv.innerHTML = tempDiv.innerHTML;
         zoneWrapper.appendChild(notesDiv);
       }
@@ -742,9 +713,13 @@ const exportToPdf = async () => {
         const checklistTitle = document.createElement("h3");
         checklistTitle.textContent = "Checklist";
         checklistTitle.style.fontSize = "20px";
-        checklistTitle.style.marginTop = "20px";
-        checklistTitle.style.marginBottom = "15px";
-        checklistTitle.style.color = "#333333";
+        checklistTitle.style.border = "2px solid #ffffff";
+        checklistTitle.style.borderRadius = "4px";
+        checklistTitle.style.padding = "3px";
+        checklistTitle.style.marginTop = "10px";
+        checklistTitle.style.marginBottom = "10px";
+        checklistTitle.style.textAlign = "center";
+        checklistTitle.style.color = "#ffffff";
         zoneWrapper.appendChild(checklistTitle);
 
         const list = document.createElement("ul");
@@ -755,66 +730,49 @@ const exportToPdf = async () => {
 
         zone.checklist.forEach((item) => {
           const li = document.createElement("li");
-          li.style.color = "#000000";
           li.style.marginBottom = "8px";
           li.style.display = "flex";
           li.style.alignItems = "center";
+
+          // Si l'élément est coché => texte et icône en vert, sinon en rouge
+          li.style.color = item.checked ? "green" : "red";
+
           li.innerHTML = `
-            <span style="margin-right: 10px; font-size: 1.2em;">
-              ${item.checked ? "✓" : "☐"}
-            </span>
-            <span style="flex: 1;">${item.text}</span>
-          `;
+        <span style="margin-right: 10px; font-size: 1.2em; font-weight: bold;">
+            ${item.checked ? "✓" : "☐"}
+        </span>
+        <span style="flex: 1;">${item.text}</span>
+    `;
+
           list.appendChild(li);
         });
 
         zoneWrapper.appendChild(list);
       }
-
       content.appendChild(zoneWrapper);
     });
 
-    wrapper.appendChild(content);
-
-
-
-    // Styles CSS pour le PDF
-    const styles = `
+    // Ajout d'une feuille de style temporaire dans le head pour la règle @page
+    const styleSheet = document.createElement("style");
+    styleSheet.innerHTML = `
       @page {
         size: A4;
         margin: 0;
       }
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-      .pdf-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        min-height: calc(297mm - 10px);
-
-      }
-
-
     `;
-    const styleSheet = document.createElement("style");
-    styleSheet.innerHTML = styles;
     document.head.appendChild(styleSheet);
 
-    // Génération du PDF
     const opt = {
       margin: 0,
-      filename: `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`,
+      filename: `${projectStore.currentProject.name.replace(/\s+/g, "_")}_${new Date()
+        .toISOString()
+        .split("T")[0]}.pdf`,
       image: { type: "jpeg", quality: 1 },
       html2canvas: {
         scale: 2,
         useCORS: true,
         backgroundColor: "#FFFFFF",
         logging: false,
-
       },
       jsPDF: {
         unit: "mm",
@@ -824,9 +782,38 @@ const exportToPdf = async () => {
       },
     };
 
-    html2pdf().set(opt).from(wrapper).save();
+    // Génération du PDF à partir de "wrapper" qui contient le contenu à exporter
+    await html2pdf().set(opt).from(wrapper).save();
+
+    // Nettoyage
+    document.body.removeChild(pdfContainer);
+    document.head.removeChild(styleSheet);
   } catch (error) {
     console.error("Error exporting to PDF:", error);
+  }
+};
+
+const imageUpload = ref(null); // Référence à l'input file
+
+// Fonction pour déclencher le file picker
+const triggerFileUpload = () => {
+  if (imageUpload.value) {
+    imageUpload.value.click();
+  }
+};
+
+// Gestion de l'upload d'image
+const handleImageUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const imageName = await storeImage(file); // Stocke l'image dans localStorage
+    const imageMarkdown = `![${file.name || 'Image'}](stored:${imageName})`;
+    easyMDE.codemirror.replaceSelection(imageMarkdown); // Utilise easyMDE directement
+    saveContent();
+  } catch (error) {
+    console.error('Erreur lors de l\'upload de l\'image:', error);
   }
 };
 
@@ -864,7 +851,6 @@ onMounted(() => {
       saveContent()
     }
 
-
     if (!currentZone.value && Object.keys(zones).length > 0) {
       currentZone.value = Object.values(zones)[0]
     }
@@ -872,7 +858,7 @@ onMounted(() => {
 })
 </script>
 
-<style>
+<style scoped>
 /* Styles globaux pour EasyMDE */
 .EasyMDEContainer {
   display: flex !important;
@@ -880,87 +866,50 @@ onMounted(() => {
   height: 100% !important;
   width: 100% !important;
   min-height: 0 !important;
+  background-color: #1E1E1E !important;
 }
 
 .EasyMDEContainer .CodeMirror {
-  flex: 1 1 auto !important;
+  flex: 1 !important;
   height: auto !important;
   min-height: 0 !important;
+  background-color: #1E1E1E !important;
+  color: #FFFFFF !important;
 }
 
-.EasyMDEContainer .editor-toolbar {
-  flex: 0 0 auto !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) !important;
-  background-color: var(--v-theme-surface);
+.editor-toolbar {
+  background-color: #1E1E1E !important;
+  border-color: #333333 !important;
 }
 
-.editor-preview-side {
-  display: none !important;
+.editor-toolbar button {
+  color: #ffffff !important;
+}
+
+.editor-toolbar button:hover,
+.editor-toolbar button.active {
+  background-color: #333333 !important;
+  border-color: #444444 !important;
+}
+
+.editor-preview {
+  background-color: #1E1E1E !important;
+
 }
 
 .CodeMirror-scroll {
-  min-height: 0 !important;
-  height: 100% !important;
+  background-color: #1E1E1E !important;
 }
 
-/* Styles pour le thème sombre */
-:deep(.v-theme--dark) .editor-wrapper .CodeMirror {
-  background-color: var(--v-theme-surface) !important;
-  color: #FFFFFF !important;
+.CodeMirror-sizer {
+  background-color: #1E1E1E !important;
 }
 
-:deep(.v-theme--dark) .editor-wrapper .CodeMirror-cursor {
-  border-left-color: #FFFFFF !important;
+.editor-wrapper {
+  background-color: #1E1E1E !important;
 }
 
-:deep(.v-theme--dark) .editor-wrapper .CodeMirror-selected {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-:deep(.v-theme--dark) .editor-wrapper .editor-preview {
-  background-color: var(--v-theme-surface) !important;
-  color: #FFFFFF !important;
-}
-
-:deep(.v-theme--dark) .editor-wrapper .editor-toolbar button {
-  color: #FFFFFF !important;
-}
-
-:deep(.v-theme--dark) .editor-wrapper .editor-toolbar button:hover,
-:deep(.v-theme--dark) .editor-wrapper .editor-toolbar button.active {
-  background-color: var(--v-theme-surface-variant);
-  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-/* Styles pour le thème clair */
-:deep(.v-theme--light) .editor-wrapper .CodeMirror {
-  background-color: #FFFFFF;
-  color: #000000;
-}
-
-:deep(.v-theme--light) .editor-wrapper .CodeMirror-cursor {
-  border-left: 2px solid black;
-}
-
-:deep(.v-theme--light) .editor-wrapper .CodeMirror-selected {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-:deep(.v-theme--light) .editor-wrapper .editor-preview {
-  background-color: #FFFFFF;
-  color: #000000;
-}
-
-:deep(.v-theme--light) .editor-wrapper .editor-toolbar button {
-  color: #000000 !important;
-}
-
-:deep(.v-theme--light) .editor-wrapper .editor-toolbar button:hover,
-:deep(.v-theme--light) .editor-wrapper .editor-toolbar button.active {
-  background-color: #f0f0f0;
-  border-color: #ddd;
-}
+/* Autres styles existants... */
 
 .editor-wrapper :deep(.editor-toolbar) {
   background-color: var(--v-theme-surface);
@@ -987,13 +936,13 @@ onMounted(() => {
   list-style-type: none;
   padding-left: 20px;
   margin: 15px 0 25px;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .checklist li {
   margin-bottom: 8px;
   page-break-inside: avoid;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .page-break {
@@ -1060,8 +1009,9 @@ onMounted(() => {
 }
 
 .preview-content img {
-  max-width: 100%;
-  height: auto;
+  max-width: 400px;
+  max-height: 300px;
+  object-fit: contain;
 }
 
 .checklist-container {
@@ -1109,7 +1059,6 @@ onMounted(() => {
   padding: 1rem;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 4px;
-
 }
 
 .zone-title {
@@ -1123,6 +1072,12 @@ onMounted(() => {
 
 .zone-content {
   min-height: 50px;
+}
+
+.zone-content img {
+  max-width: 400px;
+  max-height: 300px;
+  object-fit: contain;
 }
 
 .timer-container {
@@ -1140,5 +1095,15 @@ onMounted(() => {
 
 .preview-wrapper {
   position: relative;
+}
+
+:deep(.preview-content) img,
+:deep(.zone-content) img {
+  max-width: 500px !important;
+  max-height: 300px !important;
+  object-fit: contain !important;
+}
+:deep(.CodeMirror-cursor) {
+  border-left: 2px solid #ffffff !important;
 }
 </style>

@@ -5,6 +5,7 @@ import TechniquesView from '../views/TechniquesView.vue'
 import PrivEscView from '../views/PrivEscView.vue'
 
 
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -27,6 +28,11 @@ const router = createRouter({
       path: '/privesc',
       name: 'privesc',
       component: PrivEscView
+    },
+    {
+      path: '/checklists',
+      name: 'checklists',
+      component: () => import('../views/ChecklistsView.vue')
     }
   ]
 })
