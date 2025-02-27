@@ -44,7 +44,7 @@
 
     <!-- Navigation drawer avec les projets -->
     <v-navigation-drawer v-model="drawer" elevation="3" :rail="rail" @click="rail = false" permanent>
-      <v-list-item prepend-avatar="https://cdn-icons-png.flaticon.com/512/2631/2631389.png"
+      <v-list-item :prepend-avatar="avatarImage"
         :title="rail ? '' : 'CTF NotePad'">
         <template v-slot:append>
           <v-btn variant="text" icon="mdi-chevron-left" @click.stop="rail = !rail"></v-btn>
@@ -147,6 +147,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
+import avatarImage from '@/assets/logo.png';
 
 const router = useRouter()
 const route = useRoute()
