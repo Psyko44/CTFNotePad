@@ -1,0 +1,81 @@
+/* Mode CTF */
+[data-mode="ctf"] {
+  --primary-color: #ff525200;
+  --background-color: #121212;
+  --text-color: #ffffff;
+  --nav-background: #1e1e1e;
+  --card-background: #2d2d2d;
+}
+
+/* Mode OSINT */
+[data-mode="osint"] {
+  --primary-color: #2195f300;
+  --background-color: #020520;
+  --text-color: #ffffff;
+  --nav-background: #0a1854;
+  --card-background: #0d1f6b;
+}
+
+/* Application des styles */
+.v-application {
+  background-color: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* Navigation */
+.v-navigation-drawer {
+  background-color: var(--nav-background) !important;
+}
+
+/* Cartes */
+.v-card {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+}
+
+/* Boutons */
+.v-btn {
+  background-color: var(--primary-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* Listes */
+.v-list {
+  background-color: var(--nav-background) !important;
+  color: var(--text-color) !important;
+}
+
+.v-list-item {
+  color: var(--text-color) !important;
+}
+
+.v-list-item:hover {
+  background-color: var(--card-background) !important;
+}
+
+/* Barres d'outils */
+.v-toolbar {
+  background-color: var(--nav-background) !important;
+  color: var(--text-color) !important;
+}
+
+/* Champs de texte */
+.v-text-field .v-field__input {
+  color: var(--text-color) !important;
+  background-color: var(--card-background) !important;
+}
+
+/* Menus */
+.v-menu .v-overlay__content {
+  background-color: var(--nav-background) !important;
+}
+
+/* Dialogues */
+.v-dialog .v-card {
+  background-color: var(--nav-background) !important;
+}
+
+/* Switch */
+.v-switch .v-selection-control {
+  color: var(--text-color) !important;
+}

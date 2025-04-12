@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useThemeStore } from './theme'
 
 const STORAGE_KEY = 'ctf_notepad_projects'
 
@@ -16,6 +17,19 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  const themeStore = useThemeStore()
+
+  // Fonction pour obtenir les zones par défaut
+  const getDefaultZones = () => {
+    const isOsint = themeStore.mode === 'osint'
+    return {
+      recon: { id: 'recon', name: isOsint ? 'Recherche' : 'Recon', notes: '', checklist: [], timeSpent: 0 },
+      exploit: { id: 'exploit', name: isOsint ? 'Investigation' : 'Exploit', notes: '', checklist: [], timeSpent: 0 },
+      privesc: { id: 'privesc', name: isOsint ? 'Analyse' : 'Privesc', notes: '', checklist: [], timeSpent: 0 },
+      flags: { id: 'flags', name: isOsint ? 'Résultats' : 'Flags', notes: '', checklist: [], timeSpent: 0 }
+    }
+  }
+
   // Créer un nouveau projet
   const createProject = (name) => {
     const newProject = {
@@ -27,12 +41,7 @@ export const useProjectStore = defineStore('project', () => {
         isRunning: false,
         startTime: null
       },
-      zones: {
-        recon: { id: 'recon', name: 'Recon', notes: '', checklist: [], timeSpent: 0 },
-        exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [], timeSpent: 0 },
-        privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [], timeSpent: 0 },
-        flags: { id: 'flags', name: 'Flags', notes: '', checklist: [], timeSpent: 0 }
-      }
+      zones: getDefaultZones()
     }
     projects.value.push(newProject)
     saveProjects()
@@ -42,11 +51,9 @@ export const useProjectStore = defineStore('project', () => {
   // Charger un projet
   const loadProject = (project) => {
     // S'assurer que le projet a toutes les zones par défaut
-    const defaultZones = {
-      recon: { id: 'recon', name: 'Recon', notes: '', checklist: [], timeSpent: 0 },
-      exploit: { id: 'exploit', name: 'Exploit', notes: '', checklist: [], timeSpent: 0 },
-      privesc: { id: 'privesc', name: 'Privesc', notes: '', checklist: [], timeSpent: 0 },
-      flags: { id: 'flags', name: 'Flags', notes: '', checklist: [], timeSpent: 0 }
+    const defaultZones = getDefaultZones()
+    if (!project.zones) {
+      project.zones = defaultZones
     }
 
     // Fusionner les zones existantes avec les zones par défaut

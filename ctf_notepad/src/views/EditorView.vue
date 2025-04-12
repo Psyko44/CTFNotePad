@@ -110,7 +110,7 @@
 
                   <!-- Bouton de suppression (seulement pour les zones non statiques) -->
                   <template v-slot:append>
-                    <v-btn v-if="!isStaticZone(zone.id) && !rail" icon="mdi-delete" variant="text" size="small"
+                    <v-btn v-if="!rail" icon="mdi-delete" variant="text" size="small"
                       color="error" @click.stop="deleteZone(zone)" />
                   </template>
                 </v-list-item>
@@ -120,11 +120,9 @@
             <v-divider class="my-2" />
 
             <v-list-item>
-              <v-btn block color="primary" @click="addNewZone">
-                <v-btn prepend-icon="mdi-plus" variant="text" @click="addNewZone">
-                  <v-icon v-if="rail">mdi-plus</v-icon>
-                  <span v-if="!rail">Ajouter une zone</span>
-                </v-btn>
+              <v-btn block color="primary" prepend-icon="mdi-plus" @click="addNewZone">
+                <v-icon v-if="rail">mdi-plus</v-icon>
+                <span v-if="!rail">Ajouter une zone</span>
               </v-btn>
             </v-list-item>
           </v-list>
@@ -187,6 +185,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useProjectStore } from '@/stores/project'
+import { useThemeStore } from '@/stores/theme'
 import EasyMDE from 'easymde'
 import { marked } from 'marked'
 import draggable from 'vuedraggable'
@@ -214,6 +213,7 @@ const formatTime = (seconds) => {
 }
 
 const projectStore = useProjectStore()
+const themeStore = useThemeStore()
 const currentZone = ref(null)
 let easyMDE = null
 
@@ -325,12 +325,19 @@ const selectZone = (zone) => {
   initializeEditor()
 }
 
-const staticZones = [
-  { id: 'recon', name: 'Recon' },
-  { id: 'exploit', name: 'Exploit' },
-  { id: 'privesc', name: 'Privesc' },
-  { id: 'flags', name: 'Flags' }
-]
+const staticZones = computed(() => {
+  const baseZones = themeStore.mode === 'osint' ? [
+    { id: 'recon', name: 'Recherche' },
+    { id: 'exploit', name: 'Investigation' },
+    { id: 'privesc', name: 'Analyse' },
+  ] : [
+    { id: 'recon', name: 'Recon' },
+    { id: 'exploit', name: 'Exploit' },
+    { id: 'privesc', name: 'Privesc' },
+  ]
+
+  return [...baseZones, { id: 'flags', name: themeStore.mode === 'osint' ? 'Résultats' : 'Flags' }]
+})
 
 const zonesList = computed({
   get: () => {
@@ -372,11 +379,6 @@ const addNewZone = () => {
 
 const deleteZone = (zone) => {
   if (!projectStore.currentProject || !zone) return
-
-  if (staticZones.some(sz => sz.id === zone.id)) {
-    alert('Les zones par défaut ne peuvent pas être supprimées')
-    return
-  }
 
   if (confirm(`Êtes-vous sûr de vouloir supprimer la zone "${zone.name}" ?`)) {
     const { [zone.id]: removed, ...remainingZones } = projectStore.currentProject.zones

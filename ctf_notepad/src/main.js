@@ -1,4 +1,5 @@
 import './assets/main.css'
+import './assets/theme.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -35,6 +36,27 @@ const vuetify = createVuetify({
           warning: '#FFD54F',
           'on-background': '#ffffff',
           'on-surface': '#FF5252',
+          'on-primary': '#FFFFFF',
+          'on-secondary': '#FFFFFF',
+          'on-error': '#FFFFFF',
+          'on-info': '#FFFFFF',
+          'on-success': '#FFFFFF',
+          'on-warning': '#FFFFFF'
+        }
+      },
+      osint: {
+        dark: true,
+        colors: {
+          background: '#020520',
+          surface: '#0a1854',
+          primary: '#2196F3',
+          secondary: '#64B5F6',
+          error: '#FF5252',
+          info: '#64B5F6',
+          success: '#81C784',
+          warning: '#FFD54F',
+          'on-background': '#ffffff',
+          'on-surface': '#2196F3',
           'on-primary': '#FFFFFF',
           'on-secondary': '#FFFFFF',
           'on-error': '#FFFFFF',

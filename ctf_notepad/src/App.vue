@@ -36,16 +36,47 @@
 
 
 <template>
-  <v-app>
+  <v-app :theme="themeStore.mode">
     <v-app-bar density="compact">
-      <v-app-bar-title>CTF NotePad</v-app-bar-title>
+      <v-app-bar-title>{{ themeStore.mode === 'ctf' ? 'CTF' : 'OSINT' }} NotePad</v-app-bar-title>
       <v-spacer></v-spacer>
+      <v-switch
+        v-model="isOsintMode"
+        :true-value="true"
+        :false-value="false"
+        hide-details
+        density="compact"
+        :color="themeStore.mode === 'ctf' ? 'primary' : 'primary'"
+        class="mr-4"
+      >
+        <template v-slot:label>
+          <div class="d-flex align-center">
+            <span class="mr-2">
+              Passer en mode {{ themeStore.mode === 'ctf' ? 'OSINT' : 'CTF' }}
+            </span>
+            <v-icon size="small">mdi-arrow-right-circle</v-icon>
+          </div>
+        </template>
+      </v-switch>
+      <input
+        type="file"
+        ref="fileInput"
+        style="display: none"
+        accept=".json"
+        @change="importProject"
+      />
+      <v-btn prepend-icon="mdi-import" variant="text" @click="$refs.fileInput.click()">
+        Importer
+      </v-btn>
+      <v-btn prepend-icon="mdi-export" variant="text" @click="exportAllProjects">
+        Exporter tout
+      </v-btn>
     </v-app-bar>
 
     <!-- Navigation drawer avec les projets -->
     <v-navigation-drawer v-model="drawer" elevation="3" :rail="rail" @click="rail = false" permanent>
       <v-list-item :prepend-avatar="avatarImage"
-        :title="rail ? '' : 'CTF NotePad'">
+        :title="rail ? '' : (themeStore.mode === 'ctf' ? 'CTF' : 'OSINT') + ' NotePad'">
         <template v-slot:append>
           <v-btn variant="text" icon="mdi-chevron-left" @click.stop="rail = !rail"></v-btn>
         </template>
@@ -99,8 +130,11 @@
                   </template>
                   <v-list-item-title class="text-error">Delete</v-list-item-title>
                 </v-list-item>
-                <v-list-item @click="exportProject">
-                  <v-list-item-title>Export</v-list-item-title>
+                <v-list-item @click="exportProject(project)">
+                  <template v-slot:prepend>
+                    <v-icon>mdi-export</v-icon>
+                  </template>
+                  <v-list-item-title>Exporter</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -147,11 +181,19 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
+import { useThemeStore } from '@/stores/theme'
 import avatarImage from '@/assets/logo.png';
 
 const router = useRouter()
 const route = useRoute()
 const projectStore = useProjectStore()
+const themeStore = useThemeStore()
+
+// Gestion du mode OSINT/CTF
+const isOsintMode = computed({
+  get: () => themeStore.mode === 'osint',
+  set: (value) => themeStore.toggleMode()
+})
 const drawer = ref(true)
 const rail = ref(false)
 const showNewProjectDialog = ref(false)
@@ -181,27 +223,75 @@ function deleteProject(id) {
 
 
 
-const exportProject = () => {
-  if (!projectStore.currentProject) {
-    console.error('No project selected')
-    return
-  }
+const fileInput = ref(null)
+
+const importProject = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
 
   try {
+    const content = await file.text()
+    const importData = JSON.parse(content)
 
-    const projectData = {
-      ...projectStore.currentProject,
-      zones: projectStore.zones.map(zone => ({
-        ...zone,
-        notes: zone.notes || ''
-      }))
+    // Vérifier la version
+    if (!importData.version) {
+      throw new Error('Format de fichier invalide : version manquante')
     }
 
+    // Restaurer les images dans le localStorage
+    if (importData.images) {
+      Object.entries(importData.images).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }
 
+    // Déterminer si c'est un projet unique ou une sauvegarde complète
+    if (importData.project) {
+      // Import d'un projet unique
+      projectStore.projects.push(importData.project)
+      projectStore.saveProjects()
+      selectProject(importData.project)
+      alert('Projet importé avec succès')
+    } else if (importData.projects) {
+      // Import d'une sauvegarde complète
+      importData.projects.forEach(project => {
+        projectStore.projects.push(project)
+      })
+      projectStore.saveProjects()
+      alert(`${importData.projects.length} projets importés avec succès`)
+    } else {
+      throw new Error('Format de fichier invalide : aucun projet trouvé')
+    }
+
+    // Réinitialiser l'input file
+    event.target.value = ''
+  } catch (error) {
+    console.error('Erreur lors de l\'importation:', error)
+    alert('Erreur lors de l\'importation : ' + error.message)
+  }
+}
+
+const exportProject = (project) => {
+  if (!project) return
+
+  try {
+    // Récupérer les zones du projet
+    const projectData = {
+      ...project,
+      zones: Object.entries(project.zones || {}).reduce((acc, [id, zone]) => ({
+        ...acc,
+        [id]: {
+          ...zone,
+          notes: zone.notes || ''
+        }
+      }), {})
+    }
+
+    // Récupérer les images utilisées dans ce projet
     const projectImages = {}
     const imageKeys = Object.keys(localStorage).filter(key =>
       key.startsWith('image_') &&
-      projectData.zones.some(zone =>
+      Object.values(projectData.zones).some(zone =>
         zone.notes && zone.notes.includes(key.replace('image_', ''))
       )
     )
@@ -210,47 +300,71 @@ const exportProject = () => {
       projectImages[key] = localStorage.getItem(key)
     })
 
-
     const exportData = {
       project: projectData,
       images: projectImages,
       version: '1.0'
     }
 
-
-    const jsonString = JSON.stringify(exportData, null, 2)
-    const blob = new Blob([jsonString], { type: 'application/json' })
-
-
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${projectData.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`
-
-
-    document.body.appendChild(link)
-    link.click()
-
-
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadJson(exportData, `${projectData.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`)
   } catch (error) {
     console.error('Error exporting project:', error)
+    alert('Erreur lors de l\'export du projet')
   }
+}
 
+const exportAllProjects = () => {
+  try {
+    const allProjects = projectStore.projects
+    if (!allProjects || allProjects.length === 0) {
+      alert('Aucun projet à exporter')
+      return
+    }
+
+    // Récupérer toutes les images utilisées
+    const allImages = {}
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('image_'))
+      .forEach(key => {
+        allImages[key] = localStorage.getItem(key)
+      })
+
+    const exportData = {
+      projects: allProjects,
+      images: allImages,
+      version: '1.0'
+    }
+
+    downloadJson(exportData, `CTFNotePad_backup_${new Date().toISOString().split('T')[0]}.json`)
+  } catch (error) {
+    console.error('Error exporting all projects:', error)
+    alert('Erreur lors de l\'export des projets')
+  }
+}
+
+const downloadJson = (data, filename) => {
+  const jsonString = JSON.stringify(data, null, 2)
+  const blob = new Blob([jsonString], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 
 
 </script>
 
-<style scoped>
+<style>
 :deep(.v-main) {
   flex: 1;
   min-height: 0;
   width: 100%;
 }
-
 
 .v-navigation-drawer :deep(.v-navigation-drawer__content) {
   display: flex;
@@ -271,8 +385,8 @@ const exportProject = () => {
 }
 
 .v-list-item--active {
-  background-color: rgba(247, 8, 8, 0.253) !important;
-
+  background-color: rgb(var(--v-theme-primary)) !important;
+  opacity: 0.25;
 }
 
 .v-list-item--active .v-list-item-title {
@@ -284,6 +398,7 @@ const exportProject = () => {
 }
 
 .v-list-item:hover {
-  background-color: rgba(255, 82, 82, 0.7) !important;
+  background-color: rgb(var(--v-theme-primary)) !important;
+  opacity: 0.7;
 }
 </style>

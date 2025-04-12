@@ -3,8 +3,8 @@
     <v-row>
       <!-- En-tête -->
       <v-col cols="12" class="text-center mb-6">
-        <h1 class="text-h3 mb-2">CTF NotePad</h1>
-        <p class="text-subtitle-1">Gérez vos notes de CTF efficacement</p>
+        <h1 class="text-h3 mb-2">{{ themeStore.mode === 'ctf' ? 'CTF' : 'OSINT' }} NotePad</h1>
+        <p class="text-subtitle-1">Gérez vos notes {{ themeStore.mode === 'ctf' ? 'de CTF' : 'd\'OSINT' }} efficacement</p>
       </v-col>
 
       <!-- Bouton Nouveau Projet -->
@@ -113,12 +113,14 @@
 
 
 <script setup>
+import { useThemeStore } from '../stores/theme'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 
 const router = useRouter()
 const projectStore = useProjectStore()
+const themeStore = useThemeStore()
 const showNewProjectDialog = ref(false)
 const newProjectName = ref('')
 
