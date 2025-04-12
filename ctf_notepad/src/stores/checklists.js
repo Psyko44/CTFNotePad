@@ -85,6 +85,39 @@ export const useChecklistStore = defineStore('checklists', {
           ]}
         ]
       },
+      osint: {
+        name: 'OSINT Investigation',
+        items: [
+          { text: 'Google Dorking', items: [
+            'Recherche de fichiers sensibles (filetype:pdf site:domain.com)',
+            'Recherche d\'informations exposées (site:pastebin.com "company")',
+            'Recherche de configurations (ext:conf OR ext:cfg OR ext:ini)',
+            'Recherche de bases de données (ext:sql OR ext:db OR ext:mdb)',
+            'Recherche de backups (ext:bak OR ext:backup OR ext:old)'
+          ]},
+          { text: 'Recherche de Personnes', items: [
+            'Vérification des réseaux sociaux (LinkedIn, Twitter, Facebook)',
+            'Recherche d\'emails (hunter.io, emailrep.io)',
+            'Vérification des fuites de données (haveibeenpwned)',
+            'Recherche d\'images (Google Images, Yandex)',
+            'Analyse des métadonnées d\'images (exiftool)'
+          ]},
+          { text: 'Recherche d\'Entreprises', items: [
+            'Vérification des enregistrements DNS',
+            'Recherche Whois',
+            'Analyse des employés sur LinkedIn',
+            'Recherche de documents d\'entreprise',
+            'Vérification des sous-domaines'
+          ]},
+          { text: 'Analyse Technique', items: [
+            'Scan des ports ouverts',
+            'Énumération des technologies (Wappalyzer)',
+            'Vérification des certificats SSL',
+            'Analyse des en-têtes HTTP',
+            'Recherche de services exposés'
+          ]}
+        ]
+      },
       wireless: {
         name: 'Wireless Pentesting',
         items: [

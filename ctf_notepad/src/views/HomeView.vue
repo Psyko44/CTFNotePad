@@ -37,11 +37,7 @@
                   <span>{{ getChecklistProgress(project) }}</span>
                 </div>
 
-                <!-- Date de dernière modification -->
-                <div class="d-flex align-center">
-                  <v-icon icon="mdi-clock-outline" class="mr-2" />
-                  <span>{{ formatDate(project.lastModified) }}</span>
-                </div>
+                
               </v-card-text>
 
               <!-- Actions -->

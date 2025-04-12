@@ -93,7 +93,7 @@
           <v-list-item-title v-if="!rail">Techniques</v-list-item-title>
         </v-list-item>
 
-        <v-list-item to="/privesc" :active="route.path === '/privesc'" prepend-icon="mdi-lock">
+        <v-list-item v-if="themeStore.mode === 'ctf'" to="/privesc" :active="route.path === '/privesc'" prepend-icon="mdi-lock">
           <v-list-item-title v-if="!rail">Privilege Escalation</v-list-item-title>
         </v-list-item>
       </v-list>

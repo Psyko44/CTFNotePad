@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import EditorView from '@/views/EditorView.vue'
 import HomeView from '@/views/HomeView.vue'
-import TechniquesView from '../views/TechniquesView.vue'
 import PrivEscView from '../views/PrivEscView.vue'
+import TechniqueWrapper from '../components/TechniqueWrapper.vue'
 
 
 
@@ -22,7 +22,7 @@ const router = createRouter({
     {
       path: '/techniques',
       name: 'techniques',
-      component: TechniquesView
+      component: TechniqueWrapper
     },
     {
       path: '/privesc',
